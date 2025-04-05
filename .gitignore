@@ -1,4 +1,4 @@
-﻿secrets
-mysql_backups
-mysql_logs
-mysql_data
+﻿secrets/*
+mysql_backups/*
+mysql_logs/*
+mysql_data/*

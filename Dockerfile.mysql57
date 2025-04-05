@@ -1,5 +1,12 @@
-# Dockerfile.mysql57
-FROM mysql:5.7
+FROM mysql:5.7.44-oraclelinux7
 
-# Copy your custom config
+# Install logrotate and dependencies using yum
+RUN yum install -y logrotate cronie && \
+    yum clean all
+
+# Copy MySQL config files
 COPY ["conf.d", "/etc/mysql/conf.d"]
+
+# Copy logrotate config for MySQL
+COPY mysql-logrotate /etc/logrotate.d/mysql
+RUN chmod 644 /etc/logrotate.d/mysql

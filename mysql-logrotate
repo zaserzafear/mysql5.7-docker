@@ -1,0 +1,14 @@
+/var/log/mysql/*.log {
+    daily
+    missingok
+    rotate 90
+    compress
+    delaycompress
+    notifempty
+    create 640 mysql mysql
+    sharedscripts
+    postrotate
+        # Ensure MySQL flushes logs after rotation
+        /usr/bin/mysqladmin flush-logs -uroot -p$(cat /run/secrets/mysql_root_password)
+    endscript
+}
