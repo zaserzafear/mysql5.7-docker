@@ -1,0 +1,5 @@
+# Dockerfile.mysql57
+FROM mysql:5.7
+
+# Copy your custom config
+COPY ["conf.d", "/etc/mysql/conf.d"]

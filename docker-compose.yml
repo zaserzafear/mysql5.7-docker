@@ -1,0 +1,61 @@
+services:
+  mysql:
+    build:
+      context: .
+      dockerfile: Dockerfile.mysql57
+    container_name: mysql57
+    restart: always
+    secrets:
+      - mysql_root_password
+    environment:
+      TZ: ${TZ}
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+      MYSQL_DATABASE: mydatabase
+      MYSQL_USER: myuser
+      MYSQL_PASSWORD: mypassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+      - ./mysql_logs:/var/log/mysql
+    networks:
+      - mysql_net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin -uroot -p$(cat /run/secrets/mysql_root_password) ping -h 127.0.0.1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql57-backup:
+    build:
+      context: .
+      dockerfile: Dockerfile.mysqlbackup
+    container_name: mysql57_backup
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    secrets:
+      - mysql_root_password
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - ./mysql_backups:/backups
+    networks:
+      - mysql_net
+    command: >
+      sh -c "
+        echo '* * * * * mysqldump --skip-ssl -hmysql -uroot -p$(cat /run/secrets/mysql_root_password) --all-databases > /backups/backup-$(date +\%F-\%H-\%M).sql' > /etc/crontabs/root && \
+        crond -f -l 2
+      "
+
+secrets:
+  mysql_root_password:
+    file: ./secrets/mysql_root_password.txt
+
+networks:
+  mysql_net:

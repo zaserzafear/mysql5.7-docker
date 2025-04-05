@@ -1,0 +1,10 @@
+FROM alpine:3.21.3
+
+# Install required packages, including MySQL client and cron
+RUN apk add --no-cache mysql-client tzdata
+
+# Set the working directory (optional)
+WORKDIR /backups
+
+# Ensure the entrypoint is to keep the container running (default is infinite sleep)
+CMD ["sleep", "infinity"]
