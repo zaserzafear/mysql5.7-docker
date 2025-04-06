@@ -49,7 +49,7 @@ services:
       - mysql_net
     command: >
       sh -c "
-        echo '* * * * * /usr/bin/mariadb-dump --skip-ssl -hmysql -uroot -p$(cat /run/secrets/mysql_root_password) --all-databases > /backups/backup-$(date +\%F-\%H-\%M).sql' > /etc/crontabs/root && \
+        echo '0 0 * * * /usr/bin/mariadb-dump --skip-ssl -hmysql -uroot -p$(cat /run/secrets/mysql_root_password) --all-databases > /backups/backup-$(date +\%F-\%H-\%M).sql' > /etc/crontabs/root && \
         crond -f -l 2
       "
 
