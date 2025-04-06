@@ -1,23 +1,57 @@
 services:
-  mysql:
+  mysql-master:
     build:
       context: .
       dockerfile: Dockerfile.mysql57
-    container_name: mysql57
+      args:
+        SERVER_MODE: master
+        SERVER_ID: 1
+    container_name: mysql57.master
     restart: always
     secrets:
       - mysql_root_password
     environment:
       TZ: ${TZ}
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
-      MYSQL_DATABASE: mydatabase
-      MYSQL_USER: myuser
-      MYSQL_PASSWORD: mypassword
     ports:
       - "3306:3306"
     volumes:
-      - ./mysql_data:/var/lib/mysql
-      - ./mysql_logs:/var/log/mysql
+      - mysql_data_master:/var/lib/mysql
+      - mysql_logs_master:/var/log/mysql
+    networks:
+      - mysql_net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin -uroot -p$(cat /run/secrets/mysql_root_password) ping -h 127.0.0.1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql-slave1:
+    build:
+      context: .
+      dockerfile: Dockerfile.mysql57
+      args:
+        SERVER_MODE: slave
+        SERVER_ID: 2
+    container_name: mysql57.slave1
+    restart: always
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+    secrets:
+      - mysql_root_password
+    environment:
+      TZ: ${TZ}
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data_slave1:/var/lib/mysql
+      - mysql_logs_slave1:/var/log/mysql
     networks:
       - mysql_net
     healthcheck:
@@ -37,19 +71,20 @@ services:
     container_name: mysql57_backup
     restart: always
     depends_on:
-      mysql:
+      mysql-slave1:
         condition: service_healthy
     secrets:
       - mysql_root_password
     environment:
       TZ: ${TZ}
     volumes:
+      - ./backup-replicas.sh:/scripts/backup-replicas.sh
       - ./mysql_backups:/backups
     networks:
       - mysql_net
     command: >
       sh -c "
-        echo '0 0 * * * /usr/bin/mariadb-dump --skip-ssl -hmysql -uroot -p$(cat /run/secrets/mysql_root_password) --all-databases > /backups/backup-$(date +\%F-\%H-\%M).sql' > /etc/crontabs/root && \
+        echo '0 0 * * * sh /scripts/backup-replicas.sh > /backups/backup.log 2>&1' > /etc/crontabs/root && \
         crond -f -l 2
       "
 
@@ -57,5 +92,10 @@ secrets:
   mysql_root_password:
     file: ./secrets/mysql_root_password.txt
 
+volumes:
+  mysql_data_master:
+  mysql_logs_master:
+  mysql_data_slave1:
+  mysql_logs_slave1:
 networks:
   mysql_net:
