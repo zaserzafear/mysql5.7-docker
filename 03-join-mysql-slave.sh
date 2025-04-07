@@ -2,12 +2,9 @@
 set -e  # Exit immediately if any command fails
 
 # ────────────────────────────────────────────────────────────────
-# CONFIGURATION VARIABLES
+# Load environment variables from .env-mysql
 # ────────────────────────────────────────────────────────────────
-SLAVE_CONTAINER_NAME="mysql57.slave1"         # Docker container name for the MySQL slave
-MASTER_HOST="mysql-master"                    # Hostname or IP address of the MySQL master (used inside container)
-MASTER_USER="root"                            # Replication user (usually root or a specific replication user)
-MASTER_STATUS_FILE="./master_status.txt"      # Path to the file containing the master's binary log position
+export $(xargs < .env-mysql)
 
 # ────────────────────────────────────────────────────────────────
 # READ MASTER STATUS FROM FILE
@@ -24,17 +21,6 @@ if [[ -z "$MASTER_LOG_FILE" || -z "$MASTER_LOG_POS" ]]; then
 fi
 
 # ────────────────────────────────────────────────────────────────
-# RETRIEVE MASTER PASSWORD FROM SECRET FILE
-# This is a host-side check, assuming secrets are mounted locally
-# ────────────────────────────────────────────────────────────────
-if [[ ! -f "./secrets/mysql_root_password.txt" ]]; then
-  echo "❌ Missing root password file at ./secrets/mysql_root_password.txt"
-  exit 1
-fi
-
-MASTER_PASSWORD=$(< ./secrets/mysql_root_password.txt)
-
-# ────────────────────────────────────────────────────────────────
 # BUILD SQL REPLICATION SETUP SCRIPT
 # The script will:
 # 1. Stop the current slave process
@@ -42,15 +28,24 @@ MASTER_PASSWORD=$(< ./secrets/mysql_root_password.txt)
 # 3. Start the slave
 # 4. Show the slave status to verify replication
 # ────────────────────────────────────────────────────────────────
+# Trimmed and cleaned variables
+MASTER_LOG_FILE=$(echo "$MASTER_LOG_FILE" | tr -d '\r' | xargs)
+MASTER_LOG_POS=$(echo "$MASTER_LOG_POS" | tr -d '\r' | xargs)
+MASTER_HOST=$(echo "$MASTER_HOST" | tr -d '\r' | xargs)
+MYSQL_REPL_USER=$(echo "$MYSQL_REPL_USER" | tr -d '\r' | xargs)
+MYSQL_REPL_PASSWORD=$(echo "$MYSQL_REPL_PASSWORD" | tr -d '\r' | xargs)
+
+# Build SQL command with cleaned variables
 SQL_COMMANDS=$(cat <<EOF
 STOP SLAVE;
 CHANGE MASTER TO
   MASTER_HOST='$MASTER_HOST',
-  MASTER_USER='$MASTER_USER',
-  MASTER_PASSWORD='$MASTER_PASSWORD',
+  MASTER_USER='$MYSQL_REPL_USER',
+  MASTER_PASSWORD='$MYSQL_REPL_PASSWORD',
   MASTER_LOG_FILE='$MASTER_LOG_FILE',
   MASTER_LOG_POS=$MASTER_LOG_POS;
 START SLAVE;
+DO SLEEP(1);
 SHOW SLAVE STATUS\G
 EOF
 )

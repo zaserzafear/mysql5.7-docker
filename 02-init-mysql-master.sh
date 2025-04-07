@@ -2,15 +2,9 @@
 set -e  # Exit immediately if any command fails
 
 # ────────────────────────────────────────────────────────────────
-# Load environment variables (e.g., container name, secrets path)
+# Load environment variables from .env-mysql
 # ────────────────────────────────────────────────────────────────
-export $(xargs < .env.master)
-
-# Define the name of the MySQL master container
-MASTER_CONTAINER_NAME="mysql57.master"
-
-# Define where to store the output of the master status command
-OUTPUT_FILE="./master_status.txt"
+export $(xargs < .env-mysql)
 
 # ────────────────────────────────────────────────────────────────
 # Execute SHOW MASTER STATUS inside the master container
@@ -24,7 +18,7 @@ docker exec "$MASTER_CONTAINER_NAME" bash -c '
 PASS=$(cat /run/secrets/mysql_root_password)
 mysql -uroot -p"$PASS" -e "SHOW MASTER STATUS;" 2>/dev/null |
 awk "NR==2 {print \"File=\" \$1 \" Position=\" \$2}"
-' > "$OUTPUT_FILE"
+' > "$MASTER_STATUS_FILE"
 
 # Notify the user of the output file location
-printf "📄 Master status saved to %s\n" "$OUTPUT_FILE"
+printf "📄 Master status saved to %s\n" "$MASTER_STATUS_FILE"

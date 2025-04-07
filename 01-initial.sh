@@ -4,10 +4,10 @@ set -e  # Exit immediately if a command exits with a non-zero status
 # Load environment variables from .env-mysql
 export $(xargs < .env-mysql)
 
-# Create secrets directory and write the MySQL root password to a file
+# Create secrets directory and write the trimmed MySQL root password to a file without newline
 mkdir -p ./secrets
 MYSQL_ROOT_PASSWORD_FILE_CLEAN=$(echo "$MYSQL_ROOT_PASSWORD_FILE" | tr -d '\r')  # Clean up any carriage returns
-echo "$MYSQL_ROOT_PASSWORD" > "$MYSQL_ROOT_PASSWORD_FILE_CLEAN"
+printf "%s" "$(echo "$MYSQL_ROOT_PASSWORD" | tr -d '\r' | xargs)" > "$MYSQL_ROOT_PASSWORD_FILE_CLEAN"
 
 # Clean the MASTER_CNF to remove any carriage returns
 MASTER_CNF_CLEAN=$(echo "$MASTER_CNF" | tr -d '\r')
