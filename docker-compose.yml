@@ -10,6 +10,7 @@ services:
     restart: always
     secrets:
       - mysql_root_password
+      - mysql_repl_password
     environment:
       TZ: ${TZ}
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
@@ -44,6 +45,7 @@ services:
         condition: service_healthy
     secrets:
       - mysql_root_password
+      - mysql_repl_password
     environment:
       TZ: ${TZ}
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
@@ -91,6 +93,8 @@ services:
 secrets:
   mysql_root_password:
     file: ./secrets/mysql_root_password.txt
+  mysql_repl_password:
+    file: ./secrets/mysql_repl_password.txt
 
 volumes:
   mysql_data_master:

@@ -9,6 +9,9 @@ mkdir -p ./secrets
 MYSQL_ROOT_PASSWORD_FILE_CLEAN=$(echo "$MYSQL_ROOT_PASSWORD_FILE" | tr -d '\r')  # Clean up any carriage returns
 printf "%s" "$(echo "$MYSQL_ROOT_PASSWORD" | tr -d '\r' | xargs)" > "$MYSQL_ROOT_PASSWORD_FILE_CLEAN"
 
+MYSQL_REPL_PASSWORD_FILE_CLEAN=$(echo "$MYSQL_REPL_PASSWORD_FILE" | tr -d '\r')  # Clean up any carriage returns
+printf "%s" "$(echo "$MYSQL_REPL_PASSWORD" | tr -d '\r' | xargs)" > "$MYSQL_REPL_PASSWORD_FILE_CLEAN"
+
 # Clean the MASTER_CNF to remove any carriage returns
 MASTER_CNF_CLEAN=$(echo "$MASTER_CNF" | tr -d '\r')
 
