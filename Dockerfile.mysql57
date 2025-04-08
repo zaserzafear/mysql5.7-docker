@@ -10,16 +10,20 @@ RUN chmod 644 /etc/logrotate.d/mysql
 
 # Copy MySQL configuration files
 COPY conf.d /etc/mysql/conf.d
-COPY mysql-master.cnf /etc/mysql/mysql-master.cnf
-COPY mysql-slave.cnf /etc/mysql/mysql-slave.cnf
 
-# Define build arguments
-ARG SERVER_MODE=none
-ARG SERVER_ID=1
+RUN mkdir -p /tmp/mysql/conf.d
+COPY mysql-master.cnf /tmp/mysql/mysql-master.cnf
+COPY mysql-slave.cnf /tmp/mysql/mysql-slave.cnf
 
-# Conditionally configure MySQL replication settings
-RUN if [ "$SERVER_MODE" != "none" ]; then \
-        CONFIG_FILE="/etc/mysql/mysql-${SERVER_MODE}.cnf"; \
-        sed -i "s/\\\$SERVER_ID_REPLACE/${SERVER_ID}/" "$CONFIG_FILE" && \
-        cp "$CONFIG_FILE" "/etc/mysql/conf.d/mysql-${SERVER_MODE}.cnf"; \
-    fi
+# Copy entrypoint script
+COPY mysql-entrypoint.sh /mysql-entrypoint.sh
+COPY mysql-entrypoint-wrapper.sh /mysql-entrypoint-wrapper.sh
+RUN chmod +x /mysql-entrypoint.sh /mysql-entrypoint-wrapper.sh
+
+ENV LOGROTATE_DAYS=7
+ENV LOGROTATE_CRON="0 0 * * *"
+ENV SERVER_MODE=standalone
+ENV MYSQL_REPLICAS_DB=none
+
+ENTRYPOINT ["/mysql-entrypoint-wrapper.sh"]
+CMD ["mysqld"]

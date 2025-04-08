@@ -3,9 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.mysql57
-      args:
-        SERVER_MODE: master
-        SERVER_ID: 1
+    hostname: mysql-master
     container_name: mysql57.master
     restart: always
     secrets:
@@ -14,6 +12,13 @@ services:
     environment:
       TZ: ${TZ}
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+
+      LOGROTATE_DAYS: 90
+      LOGROTATE_CRON: "0 0 * * *"
+
+      SERVER_MODE: master
+      SERVER_ID: 1
+      MYSQL_REPLICAS_DB: db1,db2,db3
     ports:
       - "3306:3306"
     volumes:
@@ -35,9 +40,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.mysql57
-      args:
-        SERVER_MODE: slave
-        SERVER_ID: 2
     container_name: mysql57.slave1
     restart: always
     depends_on:
@@ -49,6 +51,13 @@ services:
     environment:
       TZ: ${TZ}
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+
+      LOGROTATE_DAYS: 90
+      LOGROTATE_CRON: "0 0 * * *"
+
+      SERVER_MODE: slave
+      SERVER_ID: 2
+      MYSQL_REPLICAS_DB: db1,db2,db3
     ports:
       - "3307:3306"
     volumes:
@@ -70,7 +79,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.mysqlbackup
-    container_name: mysql57_backup
+    container_name: mysql57.backup
     restart: always
     depends_on:
       mysql-slave1:
@@ -79,14 +88,18 @@ services:
       - mysql_root_password
     environment:
       TZ: ${TZ}
+      MYSQL_BACKUP_HOST: mysql-slave1
+      MYSQL_BACKUP_DB: "db1 db2 db3"
+      CRON_SCHEDULE: "0 0 * * *"
     volumes:
       - ./backup-replicas.sh:/scripts/backup-replicas.sh
       - ./mysql_backups:/backups
     networks:
       - mysql_net
-    command: >
+    entrypoint: >
       sh -c "
-        echo '0 0 * * * sh /scripts/backup-replicas.sh > /backups/backup.log 2>&1' > /etc/crontabs/root && \
+        chmod +x /scripts/backup-replicas.sh && \
+        echo \"$${CRON_SCHEDULE:-0 0 * * *} /scripts/backup-replicas.sh >> /backups/backup.log 2>&1\" > /etc/crontabs/root && \
         crond -f -l 2
       "
 

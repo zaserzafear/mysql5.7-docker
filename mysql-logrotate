@@ -1,7 +1,7 @@
 /var/log/mysql/*.log {
     daily
     missingok
-    rotate 90
+    rotate $LOGROTATE_DAYS_REPLACE
     compress
     delaycompress
     notifempty
