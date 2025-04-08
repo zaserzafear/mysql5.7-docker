@@ -3,3 +3,4 @@ mysql_backups/*
 mysql_logs/*
 mysql_data/*
 master_status.txt
+sql_script

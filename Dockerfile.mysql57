@@ -1,29 +1,31 @@
 FROM mysql:5.7.44-oraclelinux7
 
-# Install logrotate and cronie
-RUN yum install -y logrotate cronie && \
-    yum clean all
-
-# Copy logrotate configuration
-COPY mysql-logrotate /etc/logrotate.d/mysql
-RUN chmod 644 /etc/logrotate.d/mysql
+# Install logrotate and cronie, and clean up yum cache
+RUN set -eux; \
+    yum install -y logrotate cronie && \
+    yum clean all && \
+    rm -rf /var/cache/yum
 
 # Copy MySQL configuration files
 COPY conf.d /etc/mysql/conf.d
 
+# Create temp config directory and copy master/slave configs
 RUN mkdir -p /tmp/mysql/conf.d
-COPY mysql-master.cnf /tmp/mysql/mysql-master.cnf
-COPY mysql-slave.cnf /tmp/mysql/mysql-slave.cnf
+COPY mysql-master.cnf mysql-slave.cnf /tmp/mysql/
 
-# Copy entrypoint script
-COPY mysql-entrypoint.sh /mysql-entrypoint.sh
-COPY mysql-entrypoint-wrapper.sh /mysql-entrypoint-wrapper.sh
+# Copy logrotate config
+COPY mysql-logrotate /etc/logrotate.d/mysql
+RUN chmod 644 /etc/logrotate.d/mysql
+
+# Copy entrypoint scripts
+COPY mysql-entrypoint.sh mysql-entrypoint-wrapper.sh /
 RUN chmod +x /mysql-entrypoint.sh /mysql-entrypoint-wrapper.sh
 
-ENV LOGROTATE_DAYS=7
-ENV LOGROTATE_CRON="0 0 * * *"
-ENV SERVER_MODE=standalone
-ENV MYSQL_REPLICAS_DB=none
+# Set environment variables
+ENV LOGROTATE_DAYS=7 \
+    LOGROTATE_CRON="0 0 * * *" \
+    SERVER_MODE=standalone \
+    MYSQL_REPLICAS_DB=none
 
 ENTRYPOINT ["/mysql-entrypoint-wrapper.sh"]
 CMD ["mysqld"]

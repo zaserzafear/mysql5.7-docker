@@ -1,4 +1,26 @@
 services:
+  proxysql:
+    image: proxysql/proxysql
+    container_name: mysql57.proxysql
+    restart: always
+    ports:
+      - "6033:6033" # MySQL port
+      - "6032:6032" # Admin interface
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+      mysql-slave1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 6033"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./proxysql.cnf:/etc/proxysql.cnf
+    networks:
+      - mysql_net
+
   mysql-master:
     build:
       context: .
@@ -24,6 +46,7 @@ services:
     volumes:
       - mysql_data_master:/var/lib/mysql
       - mysql_logs_master:/var/log/mysql
+      - ./sql_script:/sql_script
     networks:
       - mysql_net
     healthcheck:
